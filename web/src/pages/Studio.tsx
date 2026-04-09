@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, SlidersHorizontal, Sparkles } from 'lucide-react'
 import ProviderCard from '../components/ProviderCard'
 import { useProviders } from '../hooks/useProviders'
@@ -8,6 +9,7 @@ type FilterType = 'all' | 'voice' | 'avatar' | 'both'
 type SortType = 'recommended' | 'price' | 'rating' | 'speed'
 
 export default function Studio() {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<FilterType>('all')
   const [sortBy, setSortBy] = useState<SortType>('recommended')
@@ -160,7 +162,7 @@ export default function Studio() {
             <ProviderCard
               key={provider.id}
               provider={provider}
-              onSelect={() => window.location.href = `/studio/${provider.id}`}
+              onSelect={() => navigate(`/studio/${provider.id}`)}
             />
           ))}
         </section>
