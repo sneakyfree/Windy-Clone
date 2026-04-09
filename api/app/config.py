@@ -1,7 +1,12 @@
 """Application configuration from environment variables."""
 
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+# Project root = two levels up from this file (api/app/config.py → project root)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_DEFAULT_DB = f"sqlite+aiosqlite:///{_PROJECT_ROOT / 'data' / 'windy_clone.db'}"
 
 
 class Settings(BaseSettings):
@@ -19,7 +24,7 @@ class Settings(BaseSettings):
     resembleai_api_key: str = ""
 
     # ── Database ──
-    database_url: str = "sqlite+aiosqlite:///data/windy_clone.db"
+    database_url: str = _DEFAULT_DB
 
     # ── Server ──
     host: str = "0.0.0.0"

@@ -3,6 +3,7 @@ import { useOrders, useClones, cancelOrder, deleteClone } from '../hooks/useClon
 import TrainingProgress from '../components/TrainingProgress'
 import CloneCard from '../components/CloneCard'
 import { useNavigate } from 'react-router-dom'
+import { formatDate } from '../utils/format'
 
 export default function MyClones() {
   const navigate = useNavigate()
@@ -71,7 +72,7 @@ export default function MyClones() {
                 status={job.status}
                 progress={job.progress}
                 estimatedCompletion={job.estimated_completion}
-                startedAt={job.created_at}
+                startedAt={formatDate(job.created_at)}
                 onCancel={() => handleCancel(job.id)}
               />
             ))}
@@ -121,7 +122,7 @@ export default function MyClones() {
                 provider={clone.provider_name}
                 type={clone.clone_type === 'voice' ? 'Voice Twin' : 'Digital Avatar'}
                 quality={clone.quality_label}
-                completedAt={clone.created_at}
+                completedAt={formatDate(clone.created_at)}
                 onDelete={() => handleDelete(clone.id)}
               />
             ))}

@@ -51,13 +51,18 @@ export default function StatCard({
 }: StatCardProps) {
   const [displayValue, setDisplayValue] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
-  const hasAnimated = useRef(false)
+  const lastAnimatedValue = useRef<number>(0)
 
   useEffect(() => {
+    // Skip if value hasn't changed or is zero
+    if (value === 0 || value === lastAnimatedValue.current) return
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true
+        if (entry.isIntersecting) {
+          lastAnimatedValue.current = value
+          observer.disconnect()
+
           setTimeout(() => {
             const duration = 1500
             const steps = 60

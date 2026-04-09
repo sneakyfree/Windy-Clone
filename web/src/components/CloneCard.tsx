@@ -12,7 +12,6 @@ interface CloneCardProps {
 }
 
 export default function CloneCard({
-  id,
   name,
   provider,
   type,
