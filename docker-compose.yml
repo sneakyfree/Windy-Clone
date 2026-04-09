@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  # ── API Backend ──
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8400:8400"
+    environment:
+      - DEV_MODE=false
+      - DATABASE_URL=sqlite+aiosqlite:///data/windy_clone.db
+      - WINDY_PRO_JWKS_URL=${WINDY_PRO_JWKS_URL:-https://windypro.thewindstorm.uk/.well-known/jwks.json}
+      - WINDY_PRO_API_URL=${WINDY_PRO_API_URL:-https://api.windypro.com}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - HEYGEN_API_KEY=${HEYGEN_API_KEY:-}
+      - PLAYHT_API_KEY=${PLAYHT_API_KEY:-}
+      - PLAYHT_USER_ID=${PLAYHT_USER_ID:-}
+      - RESEMBLEAI_API_KEY=${RESEMBLEAI_API_KEY:-}
+      - CORS_ORIGINS=https://windyclone.com,http://localhost:5173
+    volumes:
+      - clone-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8400/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Dev mode: frontend dev server ──
+  web-dev:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/app
+      - web-node-modules:/app/node_modules
+    profiles:
+      - dev
+    depends_on:
+      - api
+
+volumes:
+  clone-data:
+  web-node-modules:
