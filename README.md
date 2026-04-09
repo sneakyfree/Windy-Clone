@@ -9,7 +9,7 @@ Windy Clone turns your accumulated voice recordings, video captures, and transcr
 Every time you use Windy Word, you're building a treasure trove of voice data. Windy Clone is where that data becomes something immortal:
 
 1. **Your Voice Legacy** — See how much data you've accumulated and how close you are to a studio-quality clone
-2. **Clone Studio** — Browse and compare providers (ElevenLabs, HeyGen, PlayHT, and more)
+2. **Clone Studio** — Browse and compare providers (ElevenLabs, HeyGen, PlayHT, Resemble AI, and more)
 3. **One-Button Upload** — Pick a provider, hit send. We package and deliver your data automatically
 4. **My Clones** — Track training progress and preview your finished clones
 
@@ -18,34 +18,50 @@ Every time you use Windy Word, you're building a treasure trove of voice data. W
 ### Prerequisites
 
 - Node.js 20+ and npm (frontend)
-- Python 3.11+ and uv (backend)
-- A Windy Pro account (for authentication)
+- Python 3.11+ and [uv](https://docs.astral.sh/uv/) (backend)
 
-### Frontend (Dashboard)
+### 1. Clone and install
 
 ```bash
-cd web
-npm install
-npm run dev
-# → http://localhost:5173
+git clone https://github.com/sneakyfree/Windy-Clone.git
+cd Windy-Clone
+
+# Frontend
+cd web && npm install && cd ..
+
+# Backend
+cp .env.example .env
+uv pip install -e ".[dev]"
+mkdir -p data
 ```
 
-### Backend (API)
+### 2. Start both servers
 
 ```bash
-cd api
-cp ../.env.example .env  # Edit with your keys
-uv sync
-uv run uvicorn app.main:app --reload --port 8400
-# → http://localhost:8400/docs
+# Option A: Use the dev script
+./scripts/dev.sh
+
+# Option B: Start separately
+cd web && npm run dev &        # → http://localhost:5173
+cd api && uv run uvicorn app.main:app --reload --port 8400 &  # → http://localhost:8400
 ```
 
-### Both (Docker)
+### 3. Open the dashboard
+
+Navigate to **http://localhost:5173** — the Legacy page will load with dev mock data.
+
+### Run tests
 
 ```bash
-docker compose up
-# Frontend → http://localhost:3000
-# API → http://localhost:8400
+.venv/bin/python -m pytest -v   # 17 tests
+cd web && npm run build         # TypeScript check + production build
+```
+
+### Docker
+
+```bash
+docker compose up               # API on :8400, frontend built-in
+docker compose --profile dev up # + Vite dev server on :5173
 ```
 
 ## Architecture
@@ -58,20 +74,47 @@ docker compose up
 └──────────────┘     └──────────────┘     └──────────────────┘
 ```
 
+- **Frontend**: React 19 + Vite + Tailwind CSS v4
+- **Backend**: Python FastAPI + SQLAlchemy (async SQLite)
+- **Auth**: JWKS validation against Windy Pro (mock user in dev mode)
+- **Providers**: Adapter pattern — one Python class per provider
 - **Windy Clone does NOT store audio/video.** It reads from Windy Pro's account-server.
-- **Auth is via Windy Pro JWKS.** No separate login.
-- **Providers are swappable.** One adapter class per provider.
 
 ## Port
 
 `8400` (in the Windy ecosystem port allocation)
 
+## Project Structure
+
+```
+Windy-Clone/
+├── web/                  # React frontend (Vite + Tailwind)
+│   └── src/
+│       ├── pages/        # Legacy, Discover, Studio, ProviderDetail, MyClones, Settings
+│       ├── components/   # StatCard, ReadinessGauge, ProviderCard, CloneCard, etc.
+│       ├── hooks/        # useApi, useLegacy, useProviders, useClones
+│       └── utils/        # formatDate, formatNumber
+├── api/                  # FastAPI backend
+│   ├── app/
+│   │   ├── auth/         # JWKS validation, CurrentUser dependency
+│   │   ├── routes/       # legacy, providers, orders, clones, preferences
+│   │   ├── providers/    # ElevenLabs, HeyGen, PlayHT, ResembleAI adapters
+│   │   ├── services/     # data_fetcher, readiness, packager, job_tracker
+│   │   └── db/           # SQLAlchemy models + engine
+│   └── tests/            # pytest async tests
+├── deploy/               # nginx.conf, SSL setup
+├── scripts/              # dev.sh, seed-providers.py
+├── docs/                 # PROVIDER_INTEGRATION.md, USER_JOURNEY.md
+└── .github/workflows/    # CI + CD pipelines
+```
+
 ## Documentation
 
-- `DNA_STRAND_MASTER_PLAN.md` — Full architecture, decisions, page designs
-- `CLAUDE.md` — Claude Code quick-start
-- `BRAND-ARCHITECTURE.md` — The Windy product family
-- `INTEGRATION_GUIDE.md` — How Clone connects to other Windy services
+- [`DNA_STRAND_MASTER_PLAN.md`](DNA_STRAND_MASTER_PLAN.md) — Full architecture, decisions, page designs
+- [`INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md) — How Clone connects to other Windy services
+- [`docs/PROVIDER_INTEGRATION.md`](docs/PROVIDER_INTEGRATION.md) — How to add a new provider adapter
+- [`docs/USER_JOURNEY.md`](docs/USER_JOURNEY.md) — End-to-end user flow documentation
+- [`BRAND-ARCHITECTURE.md`](BRAND-ARCHITECTURE.md) — The Windy product family
 
 ## Part of the Windy Ecosystem
 
