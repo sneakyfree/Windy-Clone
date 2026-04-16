@@ -108,12 +108,56 @@ Windy-Clone/
 └── .github/workflows/    # CI + CD pipelines
 ```
 
+## Eternitas Trust API wiring
+
+Clone gates sensitive agent actions against the live Eternitas Trust API.
+The contract is owned by Eternitas — see
+[`eternitas/docs/trust-api.md`](../eternitas/docs/trust-api.md) for the
+canonical request/response shape, band/clearance semantics, and the LOWER-of
+rule. Clone implements the consumer side in
+[`api/app/services/trust_client.py`](api/app/services/trust_client.py) and the
+local gate matrix in [`docs/agent-trust-gates.md`](docs/agent-trust-gates.md).
+
+### Environment
+
+| Var | Default | Purpose |
+| --- | --- | --- |
+| `ETERNITAS_URL` | `http://localhost:8500` | Base URL for `/api/v1/trust/{passport}` and webhook origin. |
+| `ETERNITAS_USE_MOCK` | `false` | When `true`, skip HTTP and return `TOP_SECRET` for every agent — for CI or dev without Eternitas reachable. |
+| `ETERNITAS_WEBHOOK_SECRET` | *(empty)* | HMAC-SHA256 shared secret for verifying `trust.changed` webhook deliveries. |
+| `ETERNITAS_TRUST_CACHE_TTL` | `300` | Fallback TTL in seconds if the live response omits `cache_ttl_seconds`. |
+
+### Runtime behaviour
+
+- Responses are cached in-process per passport, honouring the response's `cache_ttl_seconds`.
+- `POST /api/v1/webhooks/trust/changed` verifies an HMAC signature against `ETERNITAS_WEBHOOK_SECRET` and calls `trust_client.invalidate(passport)` so the next gate re-fetches — no waiting for TTL.
+- Human callers (JWT without a `passport` claim) bypass every gate and never hit Eternitas.
+- On network error the client fails closed (treats the caller as `UNVERIFIED`).
+
+### Running the live integration suite
+
+```bash
+ETERNITAS_LIVE_URL=http://localhost:8500 \
+WINDY_CLONE_LIVE_PASSPORT_EXCEPTIONAL=ET26-AAAA-0001 \
+WINDY_CLONE_LIVE_PASSPORT_CRITICAL=ET26-AAAA-0002 \
+WINDY_CLONE_LIVE_PASSPORT_SUSPENDED=ET26-AAAA-0003 \
+WINDY_CLONE_LIVE_PASSPORT_REVOKED=ET26-AAAA-0004 \
+pytest api/tests/integration/test_trust_live.py
+```
+
+The live suite is auto-skipped when `ETERNITAS_LIVE_URL` is unset or the
+host doesn't answer `/health`. Unit tests under `api/tests/test_trust_gates.py`
+exercise the same logic against `httpx.MockTransport` responses shaped per
+the canonical contract.
+
 ## Documentation
 
 - [`DNA_STRAND_MASTER_PLAN.md`](DNA_STRAND_MASTER_PLAN.md) — Full architecture, decisions, page designs
 - [`INTEGRATION_GUIDE.md`](INTEGRATION_GUIDE.md) — How Clone connects to other Windy services
 - [`docs/PROVIDER_INTEGRATION.md`](docs/PROVIDER_INTEGRATION.md) — How to add a new provider adapter
 - [`docs/USER_JOURNEY.md`](docs/USER_JOURNEY.md) — End-to-end user flow documentation
+- [`docs/soul-file-format.md`](docs/soul-file-format.md) — `.windysoul` format v1 canonical spec
+- [`docs/agent-trust-gates.md`](docs/agent-trust-gates.md) — Agent clearance gate matrix
 - [`BRAND-ARCHITECTURE.md`](BRAND-ARCHITECTURE.md) — The Windy product family
 
 ## Part of the Windy Ecosystem

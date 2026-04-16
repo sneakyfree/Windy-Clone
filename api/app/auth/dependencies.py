@@ -8,11 +8,21 @@ from .jwks import validate_token, extract_identity_id
 
 
 class CurrentUser(BaseModel):
-    """Authenticated user extracted from JWT."""
+    """Authenticated user extracted from JWT.
+
+    A human carries `identity_id` (Windy identity UUID) and no `passport`.
+    An agent's token also carries an Eternitas `passport` claim (ET26-XXXX-XXXX);
+    trust gates look this up to decide whether a sensitive action is allowed.
+    """
     identity_id: str
     email: str | None = None
     display_name: str | None = None
     raw_token: str | None = None  # For forwarding to Windy Pro
+    passport: str | None = None  # Set when the caller is an Eternitas-verified agent
+
+    @property
+    def is_agent(self) -> bool:
+        return bool(self.passport)
 
 
 # ── Dev-mode mock user ──
@@ -21,6 +31,7 @@ _DEV_USER = CurrentUser(
     email="grant@windypro.com",
     display_name="Grant",
     raw_token=None,
+    passport=None,
 )
 
 
@@ -77,4 +88,5 @@ async def get_current_user(
         email=payload.get("email"),
         display_name=payload.get("display_name", payload.get("name")),
         raw_token=token,
+        passport=payload.get("passport"),
     )

@@ -15,6 +15,21 @@ class Settings(BaseSettings):
     # ── Auth ──
     windy_pro_jwks_url: str = "https://windypro.thewindstorm.uk/.well-known/jwks.json"
     windy_pro_api_url: str = "https://api.windypro.com"
+    windy_pro_webhook_secret: str = ""  # HMAC-SHA256 secret for /webhooks/identity/created
+
+    # ── Dashboard ──
+    dashboard_url: str = "https://windyclone.com"
+
+    # ── Eternitas (auto-hatch after training completes) ──
+    eternitas_url: str = "http://localhost:8500"  # dev default; prod override via env
+    eternitas_api_key: str = ""
+    eternitas_webhook_secret: str = ""  # HMAC secret for trust.changed webhook
+    eternitas_trust_cache_ttl: int = 300  # Fallback TTL when the API omits cache_ttl_seconds
+    eternitas_use_mock: bool = False  # True → skip HTTP, treat every agent as top_secret
+
+    # ── Soul file export ──
+    soul_signing_key_path: str = str(_PROJECT_ROOT / "data" / "soul_signing_key.pem")
+    windy_service_token: str = ""  # Bearer for cross-service soul-file export
 
     # ── Provider API keys ──
     elevenlabs_api_key: str = ""

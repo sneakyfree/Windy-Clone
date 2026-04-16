@@ -5,8 +5,10 @@ Provider data comes from the registry (config-driven, not hardcoded in UI).
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.dependencies import CurrentUser, get_current_user
+from ..db.engine import get_db
 from ..providers.registry import get_all_providers, get_provider_by_id, get_providers_by_type
 from ..providers.base import DataStats
 from ..services.data_fetcher import fetch_recording_stats
@@ -53,6 +55,7 @@ async def get_provider_detail(
 async def check_compatibility(
     provider_id: str,
     user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Check if the user's data is compatible with a provider.
@@ -63,7 +66,8 @@ async def check_compatibility(
     if not provider:
         raise HTTPException(status_code=404, detail=f"Provider '{provider_id}' not found")
 
-    stats = await fetch_recording_stats(user.identity_id)
+    result = await fetch_recording_stats(user.identity_id, jwt_token=user.raw_token, db=db)
+    stats = result.stats
 
     # Basic compatibility check based on provider type
     issues = []

@@ -2,12 +2,25 @@
 
 Windy Clone never stores audio/video — it reads stats from Pro.
 In dev mode, returns mock data matching the frontend.
+
+Production path: live HTTP → write-through to cache. If Pro is unreachable,
+fall back to the last-known-good cached snapshot with `stale=True`. If nothing
+has ever been cached, `unavailable=True`.
 """
+
+import json
+import logging
+from datetime import datetime, timezone
 
 import httpx
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import get_settings
+from ..db.models import CachedRecordingStats
+
+logger = logging.getLogger(__name__)
 
 
 class RecordingStats(BaseModel):
@@ -30,6 +43,22 @@ class TrainingBundle(BaseModel):
     quality_score: float
     quality_tier: str
     created_at: str
+
+
+class StatsResult(BaseModel):
+    """Envelope so callers can render a 'data may be stale' banner."""
+    stats: RecordingStats
+    stale: bool = False
+    unavailable: bool = False
+    fetched_at: str | None = None  # ISO8601 of the cached snapshot, if stale
+
+
+class BundlesResult(BaseModel):
+    """Bundles envelope mirroring StatsResult."""
+    bundles: list[TrainingBundle]
+    stale: bool = False
+    unavailable: bool = False
+    fetched_at: str | None = None
 
 
 # ── Mock data for dev mode ──
@@ -57,31 +86,7 @@ _MOCK_BUNDLES = [
 ]
 
 
-async def fetch_recording_stats(identity_id: str, jwt_token: str | None = None) -> RecordingStats:
-    """
-    Fetch recording statistics from Windy Pro's account-server.
-
-    GET /api/v1/recordings/stats
-
-    In dev mode, returns mock data.
-    """
-    settings = get_settings()
-
-    if settings.dev_mode:
-        return _MOCK_STATS
-
-    headers = {}
-    if jwt_token:
-        headers["Authorization"] = f"Bearer {jwt_token}"
-
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(
-            f"{settings.windy_pro_api_url}/api/v1/recordings/stats",
-            headers=headers,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
+def _parse_stats(data: dict) -> RecordingStats:
     return RecordingStats(
         total_words=data.get("total_words", 0),
         hours_audio=data.get("hours_audio", 0),
@@ -93,31 +98,7 @@ async def fetch_recording_stats(identity_id: str, jwt_token: str | None = None) 
     )
 
 
-async def fetch_training_bundles(identity_id: str, jwt_token: str | None = None) -> list[TrainingBundle]:
-    """
-    Fetch training-ready bundles from Windy Pro's account-server.
-
-    GET /api/v1/clone/training-data
-
-    In dev mode, returns mock bundles.
-    """
-    settings = get_settings()
-
-    if settings.dev_mode:
-        return _MOCK_BUNDLES
-
-    headers = {}
-    if jwt_token:
-        headers["Authorization"] = f"Bearer {jwt_token}"
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.get(
-            f"{settings.windy_pro_api_url}/api/v1/clone/training-data",
-            headers=headers,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
+def _parse_bundles(data: dict) -> list[TrainingBundle]:
     return [
         TrainingBundle(
             bundle_id=b["bundle_id"],
@@ -130,3 +111,114 @@ async def fetch_training_bundles(identity_id: str, jwt_token: str | None = None)
         )
         for b in data.get("bundles", [])
     ]
+
+
+async def _load_cache_row(
+    db: AsyncSession | None, identity_id: str
+) -> CachedRecordingStats | None:
+    if db is None:
+        return None
+    result = await db.execute(
+        select(CachedRecordingStats).where(CachedRecordingStats.identity_id == identity_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def _write_cache(
+    db: AsyncSession | None,
+    identity_id: str,
+    *,
+    stats: RecordingStats | None = None,
+    bundles: list[TrainingBundle] | None = None,
+) -> None:
+    if db is None:
+        return
+    row = await _load_cache_row(db, identity_id)
+    now = datetime.now(timezone.utc)
+    if row is None:
+        row = CachedRecordingStats(identity_id=identity_id, fetched_at=now)
+        db.add(row)
+    if stats is not None:
+        row.stats_json = json.dumps(stats.model_dump())
+    if bundles is not None:
+        row.bundles_json = json.dumps([b.model_dump() for b in bundles])
+    row.fetched_at = now
+    await db.commit()
+
+
+async def fetch_recording_stats(
+    identity_id: str,
+    jwt_token: str | None = None,
+    db: AsyncSession | None = None,
+) -> StatsResult:
+    """GET /api/v1/recordings/stats with cache fallback.
+
+    In dev mode, returns mock data. In production, a live-fetch failure
+    returns the last cached snapshot with `stale=True`.
+    """
+    settings = get_settings()
+
+    if settings.dev_mode:
+        return StatsResult(stats=_MOCK_STATS)
+
+    headers = {}
+    if jwt_token:
+        headers["Authorization"] = f"Bearer {jwt_token}"
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"{settings.windy_pro_api_url}/api/v1/recordings/stats",
+                headers=headers,
+            )
+            resp.raise_for_status()
+            stats = _parse_stats(resp.json())
+        await _write_cache(db, identity_id, stats=stats)
+        return StatsResult(stats=stats)
+    except (httpx.HTTPError, httpx.TimeoutException) as exc:
+        logger.warning("windy-pro stats fetch failed for %s: %s", identity_id, exc)
+
+    row = await _load_cache_row(db, identity_id)
+    if row is not None and row.stats_json:
+        cached = RecordingStats(**json.loads(row.stats_json))
+        fetched = row.fetched_at.isoformat() if row.fetched_at else None
+        return StatsResult(stats=cached, stale=True, fetched_at=fetched)
+
+    return StatsResult(stats=RecordingStats(), unavailable=True)
+
+
+async def fetch_training_bundles(
+    identity_id: str,
+    jwt_token: str | None = None,
+    db: AsyncSession | None = None,
+) -> BundlesResult:
+    """GET /api/v1/clone/training-data with cache fallback."""
+    settings = get_settings()
+
+    if settings.dev_mode:
+        return BundlesResult(bundles=list(_MOCK_BUNDLES))
+
+    headers = {}
+    if jwt_token:
+        headers["Authorization"] = f"Bearer {jwt_token}"
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                f"{settings.windy_pro_api_url}/api/v1/clone/training-data",
+                headers=headers,
+            )
+            resp.raise_for_status()
+            bundles = _parse_bundles(resp.json())
+        await _write_cache(db, identity_id, bundles=bundles)
+        return BundlesResult(bundles=bundles)
+    except (httpx.HTTPError, httpx.TimeoutException) as exc:
+        logger.warning("windy-pro bundles fetch failed for %s: %s", identity_id, exc)
+
+    row = await _load_cache_row(db, identity_id)
+    if row is not None and row.bundles_json:
+        cached = [TrainingBundle(**b) for b in json.loads(row.bundles_json)]
+        fetched = row.fetched_at.isoformat() if row.fetched_at else None
+        return BundlesResult(bundles=cached, stale=True, fetched_at=fetched)
+
+    return BundlesResult(bundles=[], unavailable=True)

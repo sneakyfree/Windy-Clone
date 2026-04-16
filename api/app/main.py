@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .db.engine import init_db
-from .routes import health, legacy, providers, orders, clones, preferences
+from .routes import health, legacy, providers, orders, clones, preferences, webhooks
 
 
 @asynccontextmanager
@@ -54,6 +54,7 @@ def create_app() -> FastAPI:
     app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"])
     app.include_router(clones.router, prefix="/api/v1/clones", tags=["Clones"])
     app.include_router(preferences.router, prefix="/api/v1/preferences", tags=["Preferences"])
+    app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 
     return app
 

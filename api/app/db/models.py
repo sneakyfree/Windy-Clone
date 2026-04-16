@@ -58,8 +58,23 @@ class Clone(Base):
     clone_type = Column(String, nullable=False)  # voice / avatar
     name = Column(String, nullable=False)
     provider_model_id = Column(String, nullable=True)  # External model ID
+    passport = Column(String, nullable=True, index=True)  # Eternitas passport (ET26-XXXX-XXXX)
     quality_label = Column(String, default="Standard")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class CachedRecordingStats(Base):
+    """Last-known-good recording stats from Windy Pro.
+
+    Written through on every successful fetch; read when Pro is unreachable
+    so the Legacy Dashboard can show stale-but-present data with a banner.
+    """
+    __tablename__ = "cached_recording_stats"
+
+    identity_id = Column(String, primary_key=True)
+    stats_json = Column(Text, nullable=True)
+    bundles_json = Column(Text, nullable=True)
+    fetched_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class UserPreference(Base):
