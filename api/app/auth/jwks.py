@@ -27,27 +27,38 @@ def _get_jwks_client() -> PyJWKClient:
 
 
 def validate_token(token: str) -> dict:
-    """
-    Validate a JWT using Windy Pro's JWKS endpoint.
+    """Validate a JWT using Windy Pro's JWKS endpoint.
 
     Returns the decoded payload containing at minimum:
         - windy_identity_id: str  (cross-product UUID)
         - sub: str
         - exp: int
 
+    When JWT_AUDIENCE is configured, the token must carry a matching `aud`
+    claim; same for JWT_ISSUER and `iss`. Leaving either setting blank
+    preserves the permissive default — necessary until Pro starts minting
+    audience-specific tokens.
+
     Raises jwt.exceptions.* on failure.
     """
+    settings = get_settings()
     client = _get_jwks_client()
     signing_key = client.get_signing_key_from_jwt(token)
 
-    payload = jwt.decode(
-        token,
-        signing_key.key,
-        algorithms=["RS256"],
-        options={"require": ["exp", "sub"]},
-    )
+    required = ["exp", "sub"]
+    decode_kwargs: dict = {
+        "algorithms": ["RS256"],
+    }
+    if settings.jwt_audience:
+        decode_kwargs["audience"] = settings.jwt_audience
+        required.append("aud")
+    if settings.jwt_issuer:
+        decode_kwargs["issuer"] = settings.jwt_issuer
+        required.append("iss")
 
-    return payload
+    decode_kwargs["options"] = {"require": required}
+
+    return jwt.decode(token, signing_key.key, **decode_kwargs)
 
 
 def extract_identity_id(payload: dict) -> str:
