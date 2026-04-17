@@ -1,0 +1,65 @@
+==== AUTH BEHAVIOUR ====
+GET /health (no auth)                                   200 0.001067s
+{"status":"healthy","service":"windy-clone-api","version":"0.1.0"}
+---
+GET /api/v1/providers (no auth, DEV_MODE)               200 0.085829s
+{"providers":[{"id":"windy-native","name":"Windy Clone Native","provider_type":"both","description":"Your data never leaves the Windy ecosystem. Built by us, for you. The most private and seamless way
+---
+GET /api/v1/providers (invalid bearer)                  200 0.001551s
+{"providers":[{"id":"windy-native","name":"Windy Clone Native","provider_type":"both","description":"Your data never leaves the Windy ecosystem. Built by us, for you. The most private and seamless way
+---
+GET /api/v1/providers (malformed header)                401 0.001053s
+{"detail":"Invalid Authorization header format. Expected: Bearer <token>"}
+---
+GET /api/v1/legacy/stats (no auth)                      200 0.016360s
+{"identity_id":"dev-mock-user-001","display_name":"Grant","stats":{"total_words":847293,"hours_audio":42.7,"minutes_video":18.3,"session_count":1247},"quality":{"average_score":91.5,"label":"Excellent
+---
+GET /api/v1/orders (no auth)                            200 0.027455s
+{"orders":[],"total":0}
+---
+==== BODY VALIDATION ====
+POST /api/v1/orders (missing body)                      422 0.069956s
+{"detail":[{"type":"missing","loc":["body"],"msg":"Field required","input":null}]}
+---
+POST /api/v1/orders (empty JSON)                        422 0.001938s
+{"detail":[{"type":"missing","loc":["body","provider_id"],"msg":"Field required","input":{}},{"type":"missing","loc":["body","clone_type"],"msg":"Field required","input":{}}]}
+---
+POST /api/v1/orders (bad type)                          422 0.001715s
+{"detail":[{"type":"string_type","loc":["body","provider_id"],"msg":"Input should be a valid string","input":123},{"type":"string_type","loc":["body","clone_type"],"msg":"Input should be a valid strin
+---
+POST /api/v1/orders (unknown provider)                  404 0.003258s
+{"detail":"Provider 'pwned' not found"}
+---
+POST /api/v1/orders (coming_soon)                       400 0.001432s
+{"detail":"Provider 'Windy Clone Native' is not yet available"}
+---
+POST /api/v1/orders (valid elevenlabs)                  200 0.024499s
+{"order_id":"26509943-b77b-4b1e-a4be-8e0e1c07d0e3","provider_id":"elevenlabs","clone_type":"voice","status":"pending","message":"Order created for ElevenLabs. Training will begin shortly."}
+---
+POST /api/v1/orders (10MB body)                         200 0.111207s
+{"order_id":"c31bba1f-fc2f-4a9e-8173-57b8f8d1db94","provider_id":"elevenlabs","clone_type":"voice","status":"pending","message":"Order created for ElevenLabs. Training will begin shortly."}
+---
+==== PATH INJECTION ====
+GET /api/v1/clones/../../etc/passwd                     404 0.001027s
+{"detail":"Not Found"}
+---
+GET /api/v1/orders/' OR 1=1 --                          404 0.016964s
+{"detail":"Order not found"}
+---
+POST /api/v1/clones/nonexistent/export-soul-file        404 0.083286s
+{"detail":"Clone not found"}
+---
+==== WEBHOOK BEHAVIOUR ====
+POST /api/v1/webhooks/identity/created (no sig)         403 0.014580s
+{"detail":"Invalid or missing X-Windy-Pro-Signature"}
+---
+POST /api/v1/webhooks/identity/created (bad sig)        403 0.001976s
+{"detail":"Invalid or missing X-Windy-Pro-Signature"}
+---
+POST /api/v1/webhooks/trust/changed (no sig)            403 0.001773s
+{"detail":"Invalid signature"}
+---
+==== OPENAPI DRIFT ====
+GET /openapi.json                                       200 0.081469s
+{"openapi":"3.1.0","info":{"title":"Windy Clone API","description":"Digital twin marketplace — turn your recordings into voice clones, avatars, and soul files.","version":"0.1.0"},"paths":{"/health"
+---
