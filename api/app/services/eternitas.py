@@ -56,7 +56,9 @@ async def auto_hatch(
             resp = await client.post(url, headers=headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, ValueError) as exc:
+        # ValueError catches json.JSONDecodeError when Eternitas returns 2xx
+        # with a non-JSON body (e.g. an intermediary proxy swaps the response).
         logger.warning("eternitas auto-hatch failed for %s: %s", identity_id, exc)
         raise EternitasHatchError(str(exc)) from exc
 

@@ -184,7 +184,9 @@ async def get_agent_trust(passport: str) -> TrustLevel:
             resp = await client.get(url)
             resp.raise_for_status()
             data = resp.json()
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, ValueError) as exc:
+        # ValueError catches json.JSONDecodeError (subclass) when Eternitas
+        # returns non-JSON — e.g. an HTML 502 from an upstream proxy.
         logger.warning("trust lookup failed for %s: %s", passport, exc)
         return TrustLevel.UNVERIFIED
 
