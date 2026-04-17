@@ -1,13 +1,22 @@
 """ES256 signing key management for soul-file exports.
 
-Clone issues a single long-lived P-256 keypair stored as PEM on disk. First
-use generates the key; subsequent calls load and cache it. The public-key
-fingerprint is the SHA-256 of the DER-encoded SubjectPublicKeyInfo, hex.
+Resolution order (first match wins):
+  1. SOUL_SIGNING_KEY_PEM env var — inline PKCS8 PEM. Used in prod (secret
+     injected from AWS Secrets Manager via ECS task definition). Wins over
+     file because it lets every task in a multi-replica deploy load the
+     same key without sharing a volume.
+  2. SOUL_SIGNING_KEY_PATH on disk.
+  3. Auto-generate and persist at SOUL_SIGNING_KEY_PATH — DEV ONLY. Refused
+     when DEV_MODE=false so a misconfigured prod task can't quietly mint
+     its own per-replica key and fork the fleet's signing identity.
+
+The public-key fingerprint is the SHA-256 of the DER-encoded SubjectPublicKeyInfo.
 """
 
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import threading
 from pathlib import Path
@@ -18,36 +27,61 @@ from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 from ..config import get_settings
 
+logger = logging.getLogger(__name__)
+
 _lock = threading.Lock()
 _cached: tuple[ec.EllipticCurvePrivateKey, str] | None = None
 
 
+class MissingSigningKey(RuntimeError):
+    """Raised when no signing key is available and auto-generation is disallowed."""
+
+
+def _parse_pem(pem: bytes, origin: str) -> ec.EllipticCurvePrivateKey:
+    priv = serialization.load_pem_private_key(pem, password=None)
+    if not isinstance(priv, ec.EllipticCurvePrivateKey):
+        raise RuntimeError(f"{origin} is not an EC private key")
+    return priv
+
+
 def _load_or_create() -> tuple[ec.EllipticCurvePrivateKey, str]:
-    """Load the signing key from disk, generating it on first use.
+    """Resolve the signing key per the module docstring order."""
+    settings = get_settings()
 
-    Returns (private_key, public_fingerprint_hex).
-    """
-    path = Path(get_settings().soul_signing_key_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    if path.exists():
-        pem = path.read_bytes()
-        priv = serialization.load_pem_private_key(pem, password=None)
-        if not isinstance(priv, ec.EllipticCurvePrivateKey):
-            raise RuntimeError(f"{path} is not an EC private key")
+    # 1. Inline PEM from env (preferred in prod).
+    if settings.soul_signing_key_pem.strip():
+        priv = _parse_pem(settings.soul_signing_key_pem.encode(), "SOUL_SIGNING_KEY_PEM")
+        logger.info("soul-file signing key loaded from SOUL_SIGNING_KEY_PEM env")
     else:
-        priv = ec.generate_private_key(ec.SECP256R1())
-        pem = priv.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        )
-        # Restrictive perms — key material at rest
-        path.write_bytes(pem)
-        try:
-            os.chmod(path, 0o600)
-        except OSError:
-            pass
+        # 2. PEM on disk.
+        path = Path(settings.soul_signing_key_path)
+        if path.exists():
+            priv = _parse_pem(path.read_bytes(), str(path))
+            logger.info("soul-file signing key loaded from %s", path)
+        else:
+            # 3. Auto-generate — DEV ONLY.
+            if not settings.dev_mode:
+                raise MissingSigningKey(
+                    "No soul-file signing key found. Set SOUL_SIGNING_KEY_PEM in "
+                    "the environment (recommended) or place a PEM at "
+                    f"{path}. Auto-generation is refused when DEV_MODE=false."
+                )
+            path.parent.mkdir(parents=True, exist_ok=True)
+            priv = ec.generate_private_key(ec.SECP256R1())
+            pem = priv.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+            path.write_bytes(pem)
+            try:
+                os.chmod(path, 0o600)
+            except OSError:
+                pass
+            logger.warning(
+                "soul-file signing key auto-generated at %s — DEV ONLY path, "
+                "never relied on in production.", path,
+            )
 
     pub_der = priv.public_key().public_bytes(
         encoding=serialization.Encoding.DER,
@@ -69,7 +103,7 @@ def get_signing_key() -> tuple[ec.EllipticCurvePrivateKey, str]:
 
 
 def reset_cache() -> None:
-    """Test hook — drop the cached key so the next call re-reads from disk."""
+    """Test hook — drop the cached key so the next call re-reads."""
     global _cached
     _cached = None
 
