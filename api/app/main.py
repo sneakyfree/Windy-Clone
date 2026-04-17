@@ -2,8 +2,11 @@
 
 import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 from .config import Settings, get_settings
 from .db.engine import init_db
@@ -72,6 +75,44 @@ def _enforce_boot_guards(settings: Settings) -> None:
         )
 
 
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject requests whose declared Content-Length exceeds the configured cap.
+
+    Wave-7 probe accepted a 10 MB JSON body on POST /api/v1/orders. Every
+    endpoint on this service has a body that fits in a few KB; reject
+    anything beyond the configured ceiling up front with 413.
+
+    Clients that omit Content-Length (chunked) slip this check — uvicorn's
+    own limits handle the truly unbounded case. This is the declared-size
+    fast path, not the full defence.
+    """
+
+    def __init__(self, app, max_bytes: int):
+        super().__init__(app)
+        self._max_bytes = max_bytes
+
+    async def dispatch(self, request, call_next):
+        cl = request.headers.get("content-length")
+        if cl is not None:
+            try:
+                size = int(cl)
+            except ValueError:
+                return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length"})
+            if size > self._max_bytes:
+                logger.warning(
+                    "rejected oversized body on %s %s: %d bytes > %d max",
+                    request.method, request.url.path, size, self._max_bytes,
+                )
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "detail": f"Request body too large ({size} bytes). "
+                                  f"Max is {self._max_bytes} bytes."
+                    },
+                )
+        return await call_next(request)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle."""
@@ -119,6 +160,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
         **doc_urls,
     )
+
+    # ── Body size ceiling (must be added before CORS so 413 preempts preflight). ──
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_body_bytes)
 
     # ── CORS ──
     app.add_middleware(
