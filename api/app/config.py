@@ -45,7 +45,9 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8400
     log_level: str = "info"
-    cors_origins: str = "https://windyclone.com,http://localhost:5173"
+    # Prod default carries the public dashboard origin only. Developers
+    # extend via CORS_ORIGINS env for their local Vite server.
+    cors_origins: str = "https://windyclone.com"
 
     # ── Affiliate tracking ──
     elevenlabs_affiliate_id: str = "windy"

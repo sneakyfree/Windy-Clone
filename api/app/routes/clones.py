@@ -94,13 +94,13 @@ async def generate_preview(
     if not clone:
         raise HTTPException(status_code=404, detail="Clone not found")
 
-    # TODO: Call provider.preview(clone.provider_model_id, request.text)
-    return {
-        "clone_id": clone_id,
-        "text": request.text,
-        "status": "preview_generation_scaffolded",
-        "message": "Preview generation will be available once provider adapters are fully wired.",
-    }
+    # Scaffold until provider.preview() is wired end-to-end. Returning 501
+    # instead of a success-shaped placeholder so the frontend can't mistake
+    # it for a real preview.
+    raise HTTPException(
+        status_code=501,
+        detail="Preview generation not yet implemented.",
+    )
 
 
 @router.get("/{clone_id}/download")
@@ -118,11 +118,11 @@ async def download_clone(
     if not clone:
         raise HTTPException(status_code=404, detail="Clone not found")
 
-    return {
-        "clone_id": clone_id,
-        "status": "download_scaffolded",
-        "message": "Download will be available once provider adapters are fully wired.",
-    }
+    # See /preview comment — 501 rather than a misleading success shape.
+    raise HTTPException(
+        status_code=501,
+        detail="Clone download not yet implemented. Use /export-soul-file for the signed archive.",
+    )
 
 
 @router.post("/{clone_id}/export-soul-file")
