@@ -35,6 +35,12 @@ Follow the "What the Fresh Terminal Should Build First" section in DNA_STRAND_MA
 - Education before sales — Legacy Dashboard comes before Marketplace
 - One-button upload — user picks provider, hits send, we handle everything
 
+## Workflow
+
+- **Feature branches + PRs, always.** Never push to `main` directly — every change lands via PR. See `CONTRIBUTING.md` for full policy. This applies even when Grant says "commit + push" — default to branching + `gh pr create` unless he explicitly authorises a direct main push.
+- Wave branch naming: `wave-N-<slug>` (e.g. `wave-6-deploy-prep`).
+- Unit suite must pass (`pytest api/tests -q`) before opening a PR. Live integration suite (`ETERNITAS_LIVE_URL=... pytest api/tests/integration`) must pass when trust / gating code changes.
+
 ## Data Flow
 
 ```
