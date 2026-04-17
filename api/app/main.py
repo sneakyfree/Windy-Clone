@@ -12,6 +12,7 @@ from .config import Settings, get_settings
 from .db.engine import init_db
 from .middleware.rate_limit import RateLimitMiddleware
 from .routes import health, legacy, providers, orders, clones, preferences, webhooks
+from .services.order_reaper import reap_orphaned_orders
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +130,16 @@ async def lifespan(app: FastAPI):
             "🚨 ETERNITAS_USE_MOCK=true — every agent is treated as TOP_SECRET. "
             "Useful in CI when Eternitas isn't reachable; catastrophic in prod."
         )
+
+    # Sweep orders orphaned by a previous task's shutdown. Runs before we
+    # start accepting requests, so there's no concurrent writer on Order.status.
+    try:
+        reaped = await reap_orphaned_orders()
+        if reaped:
+            print(f"🧹 Reaped {len(reaped)} orphaned order(s) into PENDING")
+    except Exception:
+        # Reaper failure must not block startup — log and continue.
+        logger.exception("reaper failed on startup")
 
     # Log startup
     print(f"🌊 Windy Clone API starting on :{settings.port}")
