@@ -10,6 +10,7 @@ from starlette.responses import JSONResponse
 
 from .config import Settings, get_settings
 from .db.engine import init_db
+from .middleware.rate_limit import RateLimitMiddleware
 from .routes import health, legacy, providers, orders, clones, preferences, webhooks
 
 logger = logging.getLogger(__name__)
@@ -161,7 +162,10 @@ def create_app() -> FastAPI:
         **doc_urls,
     )
 
-    # ── Body size ceiling (must be added before CORS so 413 preempts preflight). ──
+    # Middleware execution order: Starlette dispatches outermost-added first.
+    # Rate-limit first (429 is cheap), then body-size (413 before body read),
+    # then CORS. Both preempt CORS so rejected requests don't burn preflight.
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_body_bytes)
 
     # ── CORS ──
