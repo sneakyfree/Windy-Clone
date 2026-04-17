@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     # ── Dashboard ──
     dashboard_url: str = "https://windyclone.com"
 
+    # ── Webhook replay defence ──
+    # If a sender includes X-*-Timestamp, we verify two things: (1) the
+    # timestamp is within webhook_max_timestamp_age_seconds, and (2) the
+    # HMAC was computed over `{timestamp}.{body}`. Senders that haven't
+    # adopted the scheme yet still work (body-only HMAC is tried as a
+    # fallback) unless webhook_require_timestamp is True, which forces the
+    # stricter contract.
+    webhook_max_timestamp_age_seconds: int = 300
+    webhook_require_timestamp: bool = False
+
     # ── Eternitas (auto-hatch after training completes) ──
     eternitas_url: str = "http://localhost:8500"  # dev default; prod override via env
     eternitas_api_key: str = ""
