@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 import httpx
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import get_settings
@@ -124,6 +125,20 @@ async def _load_cache_row(
     return result.scalar_one_or_none()
 
 
+def _apply_cache_fields(
+    row: CachedRecordingStats,
+    *,
+    stats: RecordingStats | None,
+    bundles: list[TrainingBundle] | None,
+    now: datetime,
+) -> None:
+    if stats is not None:
+        row.stats_json = json.dumps(stats.model_dump())
+    if bundles is not None:
+        row.bundles_json = json.dumps([b.model_dump() for b in bundles])
+    row.fetched_at = now
+
+
 async def _write_cache(
     db: AsyncSession | None,
     identity_id: str,
@@ -131,19 +146,37 @@ async def _write_cache(
     stats: RecordingStats | None = None,
     bundles: list[TrainingBundle] | None = None,
 ) -> None:
+    """Upsert the cache row.
+
+    Two concurrent fetches for a new identity_id used to race on SELECT →
+    INSERT and hit UNIQUE(identity_id). We now catch IntegrityError on the
+    insert path, rollback, re-read the row the other coroutine just wrote,
+    and update in place. UPDATE-path requests are unaffected.
+    """
     if db is None:
         return
-    row = await _load_cache_row(db, identity_id)
     now = datetime.now(timezone.utc)
-    if row is None:
+
+    row = await _load_cache_row(db, identity_id)
+    inserting = row is None
+    if inserting:
         row = CachedRecordingStats(identity_id=identity_id, fetched_at=now)
         db.add(row)
-    if stats is not None:
-        row.stats_json = json.dumps(stats.model_dump())
-    if bundles is not None:
-        row.bundles_json = json.dumps([b.model_dump() for b in bundles])
-    row.fetched_at = now
-    await db.commit()
+    _apply_cache_fields(row, stats=stats, bundles=bundles, now=now)
+
+    try:
+        await db.commit()
+    except IntegrityError:
+        if not inserting:
+            # We were on the UPDATE path — a genuine integrity error, not a race.
+            raise
+        await db.rollback()
+        existing = await _load_cache_row(db, identity_id)
+        if existing is None:
+            # Nothing to update — shouldn't happen, but don't deadlock.
+            return
+        _apply_cache_fields(existing, stats=stats, bundles=bundles, now=now)
+        await db.commit()
 
 
 async def fetch_recording_stats(

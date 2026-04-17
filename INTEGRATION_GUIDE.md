@@ -10,7 +10,11 @@ Windy Clone reads ALL recording data from Windy Pro's account-server. It does no
 
 ### Endpoints Used
 
-| Endpoint | What Clone Gets |
+> **Ownership:** these are endpoints on **Windy Pro's** account-server that
+> Clone consumes. They are NOT hosted by Clone. Clone's own routes live in
+> `api/app/routes/` and are surfaced at `/openapi.json` (dev mode only).
+
+| Endpoint (Pro-hosted) | What Clone Gets |
 |----------|----------------|
 | `GET /api/v1/clone/training-data` | List of training-ready bundles (audio, video, transcript, quality) |
 | `GET /api/v1/recordings/stats` | Total hours, word count, quality distribution, session count |
@@ -53,9 +57,12 @@ Displays in Legacy Dashboard
 
 ## Windy Cloud — Future Training Backend
 
-When Windy Clone Native launches, training will run on Windy Cloud's GPU compute:
+When Windy Clone Native launches, training will run on Windy Cloud's GPU
+compute. These are speculative **Cloud-hosted** endpoints — not yet
+implemented in any service, listed here as a contract target for the
+cross-repo rollout:
 
-| Endpoint (Future) | What It Does |
+| Endpoint (Cloud-hosted, future) | What It Does |
 |-------------------|-------------|
 | `POST /api/v1/compute/clone-training` | Submit audio + video for model training |
 | `GET /api/v1/compute/clone-training/{job_id}` | Poll training status |
