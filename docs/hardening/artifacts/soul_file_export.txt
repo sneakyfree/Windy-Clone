@@ -1,0 +1,100 @@
+2026-04-18 19:36:43,848 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-18 19:36:43,848 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("orders")
+2026-04-18 19:36:43,848 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-18 19:36:43,850 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("clones")
+2026-04-18 19:36:43,850 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-18 19:36:43,851 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("cached_recording_stats")
+2026-04-18 19:36:43,851 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-18 19:36:43,851 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("user_preferences")
+2026-04-18 19:36:43,852 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-18 19:36:43,852 INFO sqlalchemy.engine.Engine COMMIT
+   Database initialized
+2026-04-18 19:36:43,857 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-18 19:36:43,859 INFO sqlalchemy.engine.Engine INSERT INTO clones (id, identity_id, order_id, provider_id, clone_type, name, provider_model_id, passport, quality_label, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-04-18 19:36:43,859 INFO sqlalchemy.engine.Engine [generated in 0.00025s] ('609d957d-14d3-482a-b7de-0fe1b3f3896d', 'dev-mock-user-001', None, 'elevenlabs', 'voice', "Grant's Wave-11 Smoke Clone", 'el-probe-001', 'ET26-SMOK-0001', 'Excellent', '2026-04-18 23:36:43.858974')
+2026-04-18 19:36:43,952 INFO sqlalchemy.engine.Engine COMMIT
+seeded clone 609d957d-14d3-482a-b7de-0fe1b3f3896d
+HTTP 200
+Content-Type: application/zip
+Body size: 2235 bytes
+Head: b'PK\x03\x04\x14\x00\x00\x00\x08\x00\x96\x9c\x92\\M\xb6N\xf5\xb3\x01\x00\x00\xc4\x02\x00\x00\r\x00\x00\x00manifest.j'
+Traceback (most recent call last):
+  File "/tmp/soul_export_probe.py", line 56, in <module>
+    asyncio.run(main())
+  File "/Users/thewindstorm/.local/share/uv/python/cpython-3.12.13-macos-x86_64-none/lib/python3.12/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/Users/thewindstorm/.local/share/uv/python/cpython-3.12.13-macos-x86_64-none/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/thewindstorm/.local/share/uv/python/cpython-3.12.13-macos-x86_64-none/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/tmp/soul_export_probe.py", line 54, in main
+    await export()
+  File "/tmp/soul_export_probe.py", line 40, in export
+    parsed = json.loads(body)
+             ^^^^^^^^^^^^^^^^
+  File "/Users/thewindstorm/.local/share/uv/python/cpython-3.12.13-macos-x86_64-none/lib/python3.12/json/__init__.py", line 341, in loads
+    s = s.decode(detect_encoding(s), 'surrogatepass')
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x96 in position 10: invalid start byte
+2026-04-18 19:37:11,706 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-18 19:37:11,706 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("orders")
+2026-04-18 19:37:11,706 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-18 19:37:11,708 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("clones")
+2026-04-18 19:37:11,708 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-18 19:37:11,709 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("cached_recording_stats")
+2026-04-18 19:37:11,709 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-18 19:37:11,710 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("user_preferences")
+2026-04-18 19:37:11,710 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-18 19:37:11,711 INFO sqlalchemy.engine.Engine COMMIT
+   Database initialized
+2026-04-18 19:37:11,715 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-18 19:37:11,717 INFO sqlalchemy.engine.Engine INSERT INTO clones (id, identity_id, order_id, provider_id, clone_type, name, provider_model_id, passport, quality_label, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-04-18 19:37:11,717 INFO sqlalchemy.engine.Engine [generated in 0.00050s] ('4cc7a0fd-5991-4be9-8f1e-556428f702d1', 'dev-mock-user-001', None, 'elevenlabs', 'voice', 'Wave-11 Inspect Clone', 'el-inspect-001', 'ET26-INSP-0001', 'Excellent', '2026-04-18 23:37:11.717042')
+2026-04-18 19:37:11,719 INFO sqlalchemy.engine.Engine COMMIT
+members: ['manifest.json', 'voice/voice_model.json', 'voice/sample.wav', 'transcripts/transcripts.ndjson', 'birth_certificate.pdf', 'signature.json']
+--- manifest.json ---
+{
+  "clone_id": "4cc7a0fd-5991-4be9-8f1e-556428f702d1",
+  "content_summary": {
+    "clone_type": "voice",
+    "is_agent": true,
+    "name": "Wave-11 Inspect Clone",
+    "provider_id": "elevenlabs",
+    "provider_model_id": "el-inspect-001",
+    "quality_label": "Excellent"
+  },
+  "created_at": "2026-04-18T23:37:13.089918+00:00",
+  "files": [
+    "birth_certificate.pdf",
+    "transcripts/transcripts.ndjson",
+    "voice/sample.wav",
+    "voice/voice_model.json"
+  ],
+  "owner_email": "grant@windypro.com",
+  "passport": "ET26-INSP-0001",
+  "signing_key": {
+    "alg": "ES256",
+    "fingerprint_sha2
+--- voice/voice_model.json ---
+{
+  "model_id": "el-inspect-001",
+  "name": "Wave-11 Inspect Clone",
+  "provider": "elevenlabs"
+}
+--- voice/sample.wav ---
+(binary, 46 bytes)
+--- transcripts/transcripts.ndjson ---
+(binary, 115 bytes)
+--- birth_certificate.pdf ---
+(binary, 897 bytes)
+--- signature.json ---
+{
+  "alg": "ES256",
+  "fingerprint_sha256": "c7255d0ccdaec6fd8661b9b8b96ba3497395d850bb7599da49db9bd1aa9b9dc3",
+  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESEIvDiR0SB3fv8tdOSqvTM7RHJuk\noA5dPA+mYFxyhDHmYm9u7SXcd5I0UCGano9OP32lqxu4WD0W9C/5SN+TKA==\n-----END PUBLIC KEY-----\n",
+  "signature_b64": "v8SDPyWk7bCeBpqubve2fLhHeUMS9FtrwmeZZYgPcKtwiubocd+kiq9esePOwQYk2GEXlanKNGeDdZwwUieIJw==",
+  "signed_object": "manifest.json"
+}
