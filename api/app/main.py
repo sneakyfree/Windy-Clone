@@ -31,11 +31,20 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
 
+    # Only expose OpenAPI / Swagger / Redoc in dev. In prod, the schema
+    # leak is minor on its own but pointless surface area.
+    doc_urls = {
+        "docs_url": "/docs" if settings.dev_mode else None,
+        "redoc_url": "/redoc" if settings.dev_mode else None,
+        "openapi_url": "/openapi.json" if settings.dev_mode else None,
+    }
+
     app = FastAPI(
         title="Windy Clone API",
         description="Digital twin marketplace — turn your recordings into voice clones, avatars, and soul files.",
         version="0.1.0",
         lifespan=lifespan,
+        **doc_urls,
     )
 
     # ── CORS ──
