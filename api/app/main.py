@@ -3,10 +3,11 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
 
 from .config import Settings, get_settings
 from .db.engine import init_db
@@ -114,6 +115,36 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
                 )
         return await call_next(request)
 
+logger = logging.getLogger(__name__)
+
+
+# SQLite "database is locked" and "attempt to write a readonly database" both
+# surface as OperationalError. On PostgreSQL, transient contention surfaces
+# as OperationalError too (deadlock, serialization failure). In all cases we
+# want the client to back off and retry, not to see an opaque 500.
+_TRANSIENT_DB_MARKERS = (
+    "database is locked",
+    "attempt to write a readonly database",
+    "deadlock detected",
+    "could not serialize",
+)
+
+
+async def db_transient_handler(request: Request, exc: OperationalError) -> JSONResponse:
+    msg = str(exc).lower()
+    if any(marker in msg for marker in _TRANSIENT_DB_MARKERS):
+        logger.warning(
+            "transient DB error on %s %s — returning 503: %s",
+            request.method, request.url.path, str(exc).splitlines()[0],
+        )
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Service temporarily busy. Please retry."},
+            headers={"Retry-After": "1"},
+        )
+    # Re-raise anything we don't recognise so FastAPI's default 500 path runs.
+    raise exc
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -172,6 +203,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
         **doc_urls,
     )
+
+    # Convert transient DB contention into 503 Retry-After instead of 500.
+    app.add_exception_handler(OperationalError, db_transient_handler)
 
     # Middleware execution order: Starlette dispatches outermost-added first.
     # Rate-limit first (429 is cheap), then body-size (413 before body read),

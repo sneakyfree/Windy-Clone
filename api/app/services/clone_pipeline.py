@@ -15,9 +15,11 @@ create_order returning quickly without side effects.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import get_settings
 from ..db.engine import get_session_factory
@@ -28,6 +30,30 @@ from .data_fetcher import fetch_training_bundles
 from .eternitas import EternitasHatchError, auto_hatch
 
 logger = logging.getLogger(__name__)
+
+
+async def _load_order_with_retry(
+    db: AsyncSession, order_id: str, *, attempts: int = 5, initial_delay: float = 0.05
+) -> Order | None:
+    """Look up the order, tolerating the create-order → BackgroundTask read-after-write race.
+
+    Under concurrent load, the BackgroundTask can fire before the creating
+    session's COMMIT has propagated to the engine's read connection pool.
+    Retry briefly with exponential backoff before giving up.
+    """
+    delay = initial_delay
+    for attempt in range(attempts):
+        row = (
+            await db.execute(select(Order).where(Order.id == order_id))
+        ).scalar_one_or_none()
+        if row is not None:
+            if attempt > 0:
+                logger.info("pipeline: order %s found on attempt %d", order_id, attempt + 1)
+            return row
+        if attempt < attempts - 1:
+            await asyncio.sleep(delay)
+            delay *= 2
+    return None
 
 
 async def run_elevenlabs_pipeline(
@@ -46,9 +72,7 @@ async def run_elevenlabs_pipeline(
     factory = get_session_factory()
 
     async with factory() as db:
-        order = (
-            await db.execute(select(Order).where(Order.id == order_id))
-        ).scalar_one_or_none()
+        order = await _load_order_with_retry(db, order_id)
         if order is None:
             logger.warning("pipeline: order %s vanished before training", order_id)
             return
