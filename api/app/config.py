@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     eternitas_use_mock: bool = False  # True → skip HTTP, treat every agent as top_secret
 
     # ── Soul file export ──
+    # Signing key resolution order at module load:
+    #   1. soul_signing_key_pem (inline PEM — preferred in prod via Secrets Manager)
+    #   2. soul_signing_key_path (PEM on disk)
+    #   3. auto-generate at soul_signing_key_path (DEV ONLY — refused in prod)
+    soul_signing_key_pem: str = ""
     soul_signing_key_path: str = str(_PROJECT_ROOT / "data" / "soul_signing_key.pem")
     windy_service_token: str = ""  # Bearer for cross-service soul-file export
 
