@@ -12,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from .config import Settings, get_settings
 from .db.engine import init_db
 from .middleware.rate_limit import RateLimitMiddleware
-from .routes import health, legacy, providers, orders, clones, preferences, webhooks
+from .routes import health, legacy, providers, orders, clones, preferences, webhooks, deeplinks
 from .services.order_reaper import reap_orphaned_orders
 
 logger = logging.getLogger(__name__)
@@ -230,6 +230,7 @@ def create_app() -> FastAPI:
     app.include_router(clones.router, prefix="/api/v1/clones", tags=["Clones"])
     app.include_router(preferences.router, prefix="/api/v1/preferences", tags=["Preferences"])
     app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
+    app.include_router(deeplinks.router, prefix="/api/v1/deeplinks", tags=["DeepLinks"])
 
     return app
 

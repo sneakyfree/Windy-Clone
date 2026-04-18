@@ -1,6 +1,7 @@
 import { Mic, Video, FileText, Layers, Sparkles, ArrowRight, Shield, AlertTriangle } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import ReadinessGauge from '../components/ReadinessGauge'
+import LegacyEmptyState from '../components/LegacyEmptyState'
 import { useNavigate } from 'react-router-dom'
 import { useLegacyStats, useReadiness } from '../hooks/useLegacy'
 
@@ -12,6 +13,18 @@ export default function Legacy() {
   const stats = statsData?.stats
   const quality = statsData?.quality
   const readiness = readinessData?.readiness
+
+  // Grandma Ribbon (Wave 8): a fresh user who hasn't recorded anything
+  // yet sees a single "0% there" tease instead of a wall of zero gauges.
+  // Only trigger once stats have loaded — mid-fetch is still skeleton
+  // territory, and an API error shouldn't flip us into empty-state mode
+  // (we'd be lying to a user who actually has recordings).
+  const noRecordings =
+    !statsLoading &&
+    !statsError &&
+    !!stats &&
+    stats.session_count === 0 &&
+    stats.total_words === 0
 
   return (
     <div className="space-y-10">
@@ -50,7 +63,10 @@ export default function Legacy() {
         </div>
       </section>
 
+      {noRecordings && <LegacyEmptyState />}
+
       {/* ── Data Stats Grid ── */}
+      {!noRecordings && <>
       <section>
         <h2 className="text-xl font-display font-semibold text-text-primary mb-5 flex items-center gap-2">
           <span className="w-1.5 h-6 rounded-full bg-gradient-to-b from-cyan-glow to-purple-glow" />
@@ -160,7 +176,7 @@ export default function Legacy() {
       </section>
 
       {/* ── Quality Indicator ── */}
-      {quality && (
+      {quality && quality.average_score > 0 && (
         <section className="glass-card rounded-2xl p-6 flex items-start gap-4 animate-fade-in-up delay-500">
           <div className={`w-12 h-12 rounded-xl ${quality.average_score >= 80 ? 'bg-emerald-glow/15' : 'bg-amber-glow/15'} flex items-center justify-center shrink-0`}>
             {quality.average_score >= 80 ? (
@@ -181,6 +197,7 @@ export default function Legacy() {
           </div>
         </section>
       )}
+      </>}
     </div>
   )
 }
