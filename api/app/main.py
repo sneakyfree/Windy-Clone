@@ -1,5 +1,6 @@
 """FastAPI application factory — Windy Clone API."""
 
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .db.engine import init_db
 from .routes import health, legacy, providers, orders, clones, preferences, webhooks
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -17,11 +20,18 @@ async def lifespan(app: FastAPI):
     # Initialize database tables
     await init_db()
 
+    if settings.eternitas_use_mock:
+        logger.warning(
+            "🚨 ETERNITAS_USE_MOCK=true — every agent is treated as TOP_SECRET. "
+            "Useful in CI when Eternitas isn't reachable; catastrophic in prod."
+        )
+
     # Log startup
     print(f"🌊 Windy Clone API starting on :{settings.port}")
     print(f"   JWKS URL: {settings.windy_pro_jwks_url}")
     print(f"   Pro API:  {settings.windy_pro_api_url}")
     print(f"   Dev mode: {settings.dev_mode}")
+    print(f"   Eternitas mock: {settings.eternitas_use_mock}")
 
     yield
 
