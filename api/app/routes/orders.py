@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth.dependencies import CurrentUser, get_current_user
 from ..db.engine import get_db
 from ..db.models import Order, OrderStatus
-from ..providers.registry import get_provider_by_id
+from ..providers.registry import get_provider_by_id, is_provider_wired
 from ..services.clone_pipeline import run_elevenlabs_pipeline
 from ..services.trust_client import GatedAction, TrustGateError, enforce_gate
 
@@ -44,7 +44,20 @@ async def create_order(
         raise HTTPException(status_code=404, detail=f"Provider '{request.provider_id}' not found")
 
     if provider.coming_soon:
-        raise HTTPException(status_code=400, detail=f"Provider '{provider.name}' is not yet available")
+        raise HTTPException(
+            status_code=501,
+            detail=f"Provider '{provider.name}' is not yet implemented. "
+                   f"The marketplace listing is a preview — no training will run.",
+        )
+
+    # Belt-and-braces: even if a provider's coming_soon flag drifts, never accept
+    # an order for a provider whose adapter isn't in WIRED_PROVIDER_IDS.
+    if not is_provider_wired(request.provider_id):
+        raise HTTPException(
+            status_code=501,
+            detail=f"Provider '{provider.name}' has no wired adapter. "
+                   f"Order cannot be fulfilled.",
+        )
 
     # ── Agent trust gates (humans bypass). Order of checks matters: ─────
     # any clone order needs VERIFIED, cloning a HUMAN target needs CLEARED.

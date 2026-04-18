@@ -35,6 +35,10 @@ _PROVIDER_CATALOG: list[ProviderInfo] = [
         features=["Instant cloning", "29 languages", "Emotional range", "API access", "Commercial license"],
         logo="🎙️",
     ),
+    # HeyGen/PlayHT/Resemble adapters are scaffolded (placeholder job IDs, no
+    # real provider traffic). Keep them visible in the marketplace with
+    # coming_soon=True so /studio can render the card but /orders refuses
+    # submissions with 501. Flip when the adapter is actually wired.
     ProviderInfo(
         id="heygen",
         name="HeyGen",
@@ -45,6 +49,7 @@ _PROVIDER_CATALOG: list[ProviderInfo] = [
         turnaround="2-5 minutes",
         features=["Lip sync", "40+ languages", "Custom backgrounds", "Templates", "API access"],
         logo="🎬",
+        coming_soon=True,
     ),
     ProviderInfo(
         id="playht",
@@ -56,6 +61,7 @@ _PROVIDER_CATALOG: list[ProviderInfo] = [
         turnaround="10-30 minutes",
         features=["Emotion control", "SSML support", "API access", "Streaming", "Custom pronunciation"],
         logo="▶️",
+        coming_soon=True,
     ),
     ProviderInfo(
         id="resembleai",
@@ -67,7 +73,9 @@ _PROVIDER_CATALOG: list[ProviderInfo] = [
         turnaround="15-30 minutes",
         features=["Real-time synthesis", "Voice editing", "Watermarking", "Localization", "Neural TTS"],
         logo="🔊",
+        coming_soon=True,
     ),
+    # synthesia/did/tavus have no adapter file at all — definitely coming_soon.
     ProviderInfo(
         id="synthesia",
         name="Synthesia",
@@ -78,6 +86,7 @@ _PROVIDER_CATALOG: list[ProviderInfo] = [
         turnaround="5-10 minutes",
         features=["Studio quality", "130+ languages", "Templates", "Brand kit", "Collaboration"],
         logo="🎥",
+        coming_soon=True,
     ),
     ProviderInfo(
         id="did",
@@ -89,6 +98,7 @@ _PROVIDER_CATALOG: list[ProviderInfo] = [
         turnaround="1-3 minutes",
         features=["Photo animation", "Fast creation", "Chat mode", "Streaming API", "Emotions"],
         logo="👤",
+        coming_soon=True,
     ),
     ProviderInfo(
         id="tavus",
@@ -100,8 +110,20 @@ _PROVIDER_CATALOG: list[ProviderInfo] = [
         turnaround="30-60 minutes",
         features=["Voice + Avatar", "Personalization", "Batch creation", "CRM integration", "Analytics"],
         logo="🪄",
+        coming_soon=True,
     ),
 ]
+
+
+# Single source of truth for "which providers have a fully wired adapter".
+# /orders cross-references this before accepting a submission; /providers
+# reads the `coming_soon` flag from ProviderInfo for display purposes.
+WIRED_PROVIDER_IDS: frozenset[str] = frozenset({"elevenlabs"})
+
+
+def is_provider_wired(provider_id: str) -> bool:
+    """True iff we have a real adapter that can actually hit the provider API."""
+    return provider_id in WIRED_PROVIDER_IDS
 
 # Index by ID for fast lookup
 _PROVIDER_MAP: dict[str, ProviderInfo] = {p.id: p for p in _PROVIDER_CATALOG}
