@@ -40,6 +40,7 @@ Follow the "What the Fresh Terminal Should Build First" section in DNA_STRAND_MA
 - **Feature branches + PRs, always.** Never push to `main` directly — every change lands via PR. See `CONTRIBUTING.md` for full policy. This applies even when Grant says "commit + push" — default to branching + `gh pr create` unless he explicitly authorises a direct main push.
 - Wave branch naming: `wave-N-<slug>` (e.g. `wave-6-deploy-prep`).
 - Unit suite must pass (`pytest api/tests -q`) before opening a PR. Live integration suite (`ETERNITAS_LIVE_URL=... pytest api/tests/integration`) must pass when trust / gating code changes.
+- **Wave-7 batch-merge exception (one-time, 2026-04-17):** Grant authorised self-merging Bucket A of the Wave-7 PR queue (`docs/MERGE_TRIAGE.md`) and merging Bucket B after smoke pass. This is a one-time carve-out for the backlog landing; standard branch-and-review policy resumes afterward.
 
 ## Data Flow
 
