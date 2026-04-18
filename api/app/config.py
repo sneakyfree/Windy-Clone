@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     # Prod default carries the public dashboard origin only. Developers
     # extend via CORS_ORIGINS env for their local Vite server.
     cors_origins: str = "https://windyclone.com"
+    # Hard ceiling on inbound request bodies. Orders/preferences/webhooks all
+    # fit in < 4 KB; 64 KB leaves headroom for future multipart bodies but
+    # still rejects obvious abuse (Wave-7 probe accepted a 10 MB body).
+    max_request_body_bytes: int = 65_536
 
     # ── Affiliate tracking ──
     elevenlabs_affiliate_id: str = "windy"
