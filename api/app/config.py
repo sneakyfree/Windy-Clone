@@ -53,8 +53,12 @@ class Settings(BaseSettings):
     elevenlabs_affiliate_id: str = "windy"
     heygen_affiliate_id: str = "windy"
 
-    # ── Dev mode ──
-    dev_mode: bool = True  # When True, auth is optional and mock data is available
+    # ── Environment + dev mode ──
+    # environment drives boot-time safety guards; "development" | "staging" | "production".
+    environment: str = "development"
+    # dev_mode defaults to False so a prod deploy that forgets to set it gets real auth.
+    # Local dev must set DEV_MODE=true explicitly (see .env.example).
+    dev_mode: bool = False
 
     @property
     def cors_origin_list(self) -> list[str]:
