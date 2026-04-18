@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     windy_pro_api_url: str = "https://api.windypro.com"
     windy_pro_webhook_secret: str = ""  # HMAC-SHA256 secret for /webhooks/identity/created
 
+    # Optional JWT audience / issuer validation. Leave blank to skip the check
+    # (current behavior — Pro has not yet committed to an aud claim for Clone).
+    # When set, every inbound JWT must include a matching `aud` / `iss`.
+    # Once Pro mints audience-specific tokens, set JWT_AUDIENCE=windy-clone.
+    jwt_audience: str = ""
+    jwt_issuer: str = ""
+
     # ── Dashboard ──
     dashboard_url: str = "https://windyclone.com"
 
