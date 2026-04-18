@@ -175,7 +175,7 @@ async def fetch_recording_stats(
             stats = _parse_stats(resp.json())
         await _write_cache(db, identity_id, stats=stats)
         return StatsResult(stats=stats)
-    except (httpx.HTTPError, httpx.TimeoutException) as exc:
+    except (httpx.HTTPError, httpx.TimeoutException, ValueError) as exc:
         logger.warning("windy-pro stats fetch failed for %s: %s", identity_id, exc)
 
     row = await _load_cache_row(db, identity_id)
@@ -212,7 +212,7 @@ async def fetch_training_bundles(
             bundles = _parse_bundles(resp.json())
         await _write_cache(db, identity_id, bundles=bundles)
         return BundlesResult(bundles=bundles)
-    except (httpx.HTTPError, httpx.TimeoutException) as exc:
+    except (httpx.HTTPError, httpx.TimeoutException, ValueError) as exc:
         logger.warning("windy-pro bundles fetch failed for %s: %s", identity_id, exc)
 
     row = await _load_cache_row(db, identity_id)
