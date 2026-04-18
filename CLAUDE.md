@@ -1,5 +1,14 @@
 # Windy Clone — Claude Code Instructions
 
+## Canonical path (Wave 8, transitional)
+
+The canonical path for this repo is `/Users/thewindstorm/windy-clone`.
+The working copy currently still lives at
+`/Users/thewindstorm/Desktop/Grant's Folder/Windy-Clone` — a filesystem
+`mv` is scheduled; see `docs/RELOCATION.md`. Nothing inside the repo
+hardcodes the Desktop path, so agents and scripts keep working either
+way, but prefer `~/windy-clone` in any new code, CI config, or doc.
+
 ## What This Is
 
 Windy Clone is the digital twin marketplace for the Windy ecosystem. It turns users' accumulated voice, video, and text data into voice clones, digital avatars, and soul files — through third-party providers (ElevenLabs, HeyGen, etc.) or eventually through Windy's own training pipeline.
