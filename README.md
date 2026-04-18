@@ -2,6 +2,8 @@
 
 **Your voice lives forever.**
 
+> Canonical local path: `~/windy-clone` (matches every other `windy-*` repo).
+
 Windy Clone turns your accumulated voice recordings, video captures, and transcribed text into a digital twin — a voice clone that sounds like you, a digital avatar that looks like you, and a soul file that captures who you are.
 
 ## What It Does

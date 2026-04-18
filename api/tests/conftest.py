@@ -1,12 +1,33 @@
 """Pytest fixtures for Windy Clone API tests."""
 
-import pytest
-from httpx import AsyncClient, ASGITransport
+# ── Critical ordering: set DATABASE_URL before any `app.*` module is
+# imported, so Settings picks up the test override instead of the
+# default `sqlite+aiosqlite:///<repo>/data/windy_clone.db`. On CI the
+# `data/` directory is .gitignore'd and absent, which is why the
+# default used to die with
+# `sqlite3.OperationalError: unable to open database file`.
+#
+# We use a per-session tmp file rather than `:memory:` because this
+# repo's engine module (`api/app/db/engine.py`) caches a single engine
+# globally and hands out pooled connections. With `:memory:` each
+# pooled aiosqlite connection would see an empty private DB; a real
+# file path keeps every connection pointed at the same tables and
+# matches the dev runtime exactly. The tmp dir is never cleaned up —
+# pytest-xdist-safe and negligible on CI.
 
-from app.config import get_settings
-from app.main import app
-from app.db.engine import init_db
-from app.middleware.rate_limit import RateLimitMiddleware
+import os
+import tempfile
+
+_TEST_DB_DIR = tempfile.mkdtemp(prefix="windy-clone-test-")
+os.environ.setdefault("DATABASE_URL", f"sqlite+aiosqlite:///{_TEST_DB_DIR}/test.db")
+
+import pytest  # noqa: E402
+from httpx import AsyncClient, ASGITransport  # noqa: E402
+
+from app.config import get_settings  # noqa: E402
+from app.main import app  # noqa: E402
+from app.db.engine import init_db  # noqa: E402
+from app.middleware.rate_limit import RateLimitMiddleware  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -47,7 +68,6 @@ def anyio_backend():
 @pytest.fixture
 async def client():
     """Async test client for the FastAPI app with fresh DB."""
-    # Initialize in-memory DB for tests
     await init_db()
 
     transport = ASGITransport(app=app)
