@@ -150,10 +150,19 @@ async def get_order(
         "clone_type": order.provider_type,
         "status": order.status,
         "progress": order.progress,
-        "estimated_completion": "Pending" if order.status == "pending" else "In progress",
+        "estimated_completion": _estimated_completion(order.status),
         "error_message": order.error_message,
         "created_at": order.created_at.isoformat() if order.created_at else "",
     }
+
+
+def _estimated_completion(status: str) -> str:
+    """Human-readable progress hint for the dashboard."""
+    if status == OrderStatus.AWAITING_UPSTREAM.value:
+        return "Waiting on Windy Pro"
+    if status == OrderStatus.PENDING.value:
+        return "Pending"
+    return "In progress"
 
 
 @router.post("/{order_id}/cancel")

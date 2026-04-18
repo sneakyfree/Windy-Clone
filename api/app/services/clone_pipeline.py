@@ -91,13 +91,33 @@ async def run_elevenlabs_pipeline(
                     identity_id, jwt_token=jwt_token, db=db
                 )
                 if bundles_result.unavailable or not bundles_result.bundles:
-                    raise RuntimeError("no training audio available from Windy Pro")
-                # Audio bytes are not yet surfaced by Pro. Until that endpoint
-                # lands we can't actually push real files to ElevenLabs; mark
-                # the order as blocked on Pro so the user knows why.
-                raise RuntimeError(
-                    "Windy Pro has not yet exposed bundle audio — submit_training needs real bytes"
+                    # No recordings at all — user needs to record first.
+                    order.status = OrderStatus.AWAITING_UPSTREAM.value
+                    order.error_message = (
+                        "We don't have any recordings from Windy Pro yet. "
+                        "Make a few recordings in Windy Word and try again."
+                    )
+                    await db.commit()
+                    logger.info(
+                        "order %s: awaiting upstream (no recordings available)", order_id,
+                    )
+                    return
+
+                # Recordings exist as metadata, but Pro hasn't yet exposed the
+                # audio *bytes* endpoint we'd need to forward to ElevenLabs.
+                # Park the order; a reaper can retry when the Pro endpoint lands.
+                order.status = OrderStatus.AWAITING_UPSTREAM.value
+                order.error_message = (
+                    "Your recordings are ready, but Windy Pro hasn't enabled "
+                    "audio export yet. We'll start training automatically as "
+                    "soon as it does — no action needed from you."
                 )
+                await db.commit()
+                logger.info(
+                    "order %s: awaiting upstream (Pro audio endpoint not yet live)",
+                    order_id,
+                )
+                return
 
             package = PreparedPackage(
                 provider_id="elevenlabs",

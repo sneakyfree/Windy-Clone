@@ -23,6 +23,10 @@ class OrderStatus(str, enum.Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    # Pipeline ran but cannot complete until an upstream dependency is live
+    # (today: Windy Pro exposing bundle audio bytes). Not a failure — the
+    # order will be picked up again when the dependency lands.
+    AWAITING_UPSTREAM = "awaiting_upstream"
 
 
 class ProviderType(str, enum.Enum):
