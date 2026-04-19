@@ -1,5 +1,14 @@
 # Windy Clone — Deployment Runbook
 
+> **Domain migration, 2026-04-18.** Windy Clone's canonical domain is
+> now **`windyclone.ai`** (aligning with the .ai consumer-AI family:
+> windymail, windyfly, windychat, windyword, eternitas, hifly).
+> `windyclone.com` is kept as a **Cloudflare 302 redirect** to the .ai
+> apex — see §5 for DNS + redirect setup. Cert-on-origin, nginx config,
+> and every CORS/dashboard URL in this repo now reference `.ai`. If you
+> find a stale `.com` reference anywhere other than a historical audit
+> under `docs/audit/` or `docs/GAP_ANALYSIS.md`, it's a bug — open a PR.
+
 This runbook covers shipping Windy Clone to production. There are two
 supported targets:
 
@@ -45,7 +54,7 @@ env vars are listed in `.env.production.example` at the repo root.
   reaches in via Pro's `/api/v1/clone/training-data` endpoint with the
   user's own JWT.
 - **Clone port:** `8400` in-container. Fronted by nginx or ALB on 443.
-- **Domain:** `windyclone.com` (see §5).
+- **Domain:** `windyclone.ai` (see §5). `windyclone.com` is a legacy 302 redirect, handled by Cloudflare — it never hits our origin.
 
 ---
 
@@ -140,7 +149,7 @@ Nginx + Let's Encrypt:
 ```bash
 cp deploy/nginx.conf /etc/nginx/sites-available/windyclone
 ln -s /etc/nginx/sites-available/windyclone /etc/nginx/sites-enabled/
-certbot --nginx -d windyclone.com -d www.windyclone.com
+certbot --nginx -d windyclone.ai -d www.windyclone.ai
 systemctl reload nginx
 ```
 
@@ -174,20 +183,22 @@ each adapter lands you only need to redeploy, not re-ops.
 
 ## 5. Domain + DNS
 
-- Apex: `windyclone.com`
-- www: `www.windyclone.com` (nginx 301s to apex)
+### 5.1 Canonical domain: `windyclone.ai`
 
-DNS records:
+- Apex: `windyclone.ai`
+- www: `www.windyclone.ai` (nginx 301s to apex)
 
-| Type  | Name            | Target                                                |
-| ----- | --------------- | ----------------------------------------------------- |
-| A     | `windyclone.com` | ALB IP (AWS) or VPS IP (Hostinger)                   |
-| CNAME | `www`           | `windyclone.com`                                      |
+DNS records (`windyclone.ai` authoritative zone):
+
+| Type  | Name             | Target                                                |
+| ----- | ---------------- | ----------------------------------------------------- |
+| A     | `windyclone.ai`  | ALB IP (AWS) or VPS IP (Hostinger)                    |
+| CNAME | `www`            | `windyclone.ai`                                        |
 
 If you're fronting with AWS:
 
 ```
-windyclone.com → CNAME → <alb-dns>.us-east-1.elb.amazonaws.com
+windyclone.ai → ALIAS → <alb-dns>.us-east-1.elb.amazonaws.com
 ```
 
 Route53 only — any external CNAME at the apex breaks AWS ALIAS. Use an
@@ -196,6 +207,69 @@ ALIAS record to the ALB instead.
 TLS is terminated at the ALB (AWS) or by nginx + certbot (VPS). The
 API container itself only listens on HTTP 8400; never expose it
 directly to the internet.
+
+### 5.2 Legacy domain: `windyclone.com` → 302 redirect
+
+Per Grant's 2026-04-18 brand decision, `windyclone.com` is a **legacy
+redirect**, not a served domain. It must NEVER hit the origin — if it
+does, we'd need to issue it a cert, serve it from nginx, and deal with
+CORS on two apex origins.
+
+Cloudflare handles the redirect at the page-rule level rather than DNS,
+because Cloudflare doesn't allow root CNAMEs without Workers, and we
+want a clean 302 without TLS termination hops.
+
+**Setup once at Cloudflare (zone: `windyclone.com`):**
+
+1. **DNS:** leave a proxied A-record on the apex so Cloudflare has
+   something to intercept. It can point anywhere — `192.0.2.1` is the
+   documentation-reserved sink and is conventional. The orange-cloud
+   proxy flag is what makes this work; the upstream is never dialled.
+
+   | Type | Name | Target      | Proxy    |
+   | ---- | ---- | ----------- | -------- |
+   | A    | `@`  | `192.0.2.1` | Proxied  |
+   | A    | `www`| `192.0.2.1` | Proxied  |
+
+2. **Page Rule 1** (catches bare apex):
+   - URL pattern: `http*://windyclone.com/*`
+   - Setting: Forwarding URL → **Status 302 - Temporary Redirect**
+   - Destination: `https://windyclone.ai/$1`
+
+3. **Page Rule 2** (catches www, same shape):
+   - URL pattern: `http*://www.windyclone.com/*`
+   - Destination: `https://windyclone.ai/$1`
+
+4. **TLS mode**: Flexible (Cloudflare-only termination) — we're not
+   serving anything on the origin. Setting Full/Strict would demand a
+   cert on `192.0.2.1`, which isn't going to happen.
+
+Verify after setup:
+
+```bash
+curl -I https://windyclone.com/discover
+# → HTTP/2 302
+# → location: https://windyclone.ai/discover
+
+curl -I https://windyclone.com/?wc=windyclone://dashboard
+# → HTTP/2 302
+# → location: https://windyclone.ai/?wc=windyclone://dashboard
+# (deep links survive the redirect because $1 captures the query too)
+```
+
+If 302 → 200 ever collapses back to a direct hit on the origin, it
+means the page rules were disabled — `windyclone.com` would then 404
+because the origin's nginx refuses that `server_name`. That's the
+safety fallback: loud breakage, not silent dual-serving.
+
+### 5.3 Future: dropping the legacy domain
+
+Keep the redirect until: (a) no links in any Windy product or email
+still point at `.com`, (b) search-engine rankings have fully
+transferred (Google typically takes 3-6 months post-302), and (c) no
+customer has opened a ticket mentioning `.com` for 90 days. When all
+three are true, drop the Cloudflare page rule and let the legacy
+domain 404 naturally.
 
 ---
 

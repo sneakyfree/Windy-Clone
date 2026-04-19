@@ -14,7 +14,7 @@
 #       the passport was minted.
 #
 #  Usage:
-#    WINDY_CLONE_URL=https://windyclone.com \
+#    WINDY_CLONE_URL=https://windyclone.ai \
 #    WINDY_CLONE_SMOKE_JWT=$(cat ./smoke-jwt.txt) \
 #    ETERNITAS_URL=https://eternitas.example.com \
 #    WINDY_CLONE_SMOKE_PASSPORT=ET26-AAAA-0001 \   # optional, for §4 verify

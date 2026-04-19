@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Setup SSL certificates for windyclone.com using Let's Encrypt.
+# Setup SSL certificates for windyclone.ai using Let's Encrypt.
 # Run on the VPS (72.60.118.54) with root access.
+#
+# windyclone.com is NOT issued a cert here — it 302-redirects to
+# windyclone.ai at the Cloudflare page-rule level, so traffic for the
+# legacy domain never terminates TLS on this box.
 
 set -euo pipefail
 
-DOMAIN="windyclone.com"
+DOMAIN="windyclone.ai"
 EMAIL="grant@windypro.com"
 
 echo "🔐 Setting up SSL for $DOMAIN..."

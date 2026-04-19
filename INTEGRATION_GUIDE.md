@@ -90,7 +90,7 @@ Future: Agents will also be able to:
 
 ## Windy Pro Desktop (Electron) — Embedded Tab
 
-The Windy Clone dashboard is accessible from the Electron app's ecosystem navigation bar (the "Clone" tab, if added). It loads as an embedded webview pointing to `windyclone.com` or `localhost:5173` in development.
+The Windy Clone dashboard is accessible from the Electron app's ecosystem navigation bar (the "Clone" tab, if added). It loads as an embedded webview pointing to `windyclone.ai` or `localhost:5173` in development.
 
 The desktop app also has its own clone features (voice-clone-manager.js, clone-data-archive.js) which are the data COLLECTION side. Windy Clone dashboard is the PRESENTATION and MARKETPLACE side.
 

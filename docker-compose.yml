@@ -18,7 +18,7 @@ services:
       - PLAYHT_API_KEY=${PLAYHT_API_KEY:-}
       - PLAYHT_USER_ID=${PLAYHT_USER_ID:-}
       - RESEMBLEAI_API_KEY=${RESEMBLEAI_API_KEY:-}
-      - CORS_ORIGINS=https://windyclone.com,http://localhost:5173
+      - CORS_ORIGINS=https://windyclone.ai,http://localhost:5173
     volumes:
       - clone-data:/app/data
     restart: unless-stopped

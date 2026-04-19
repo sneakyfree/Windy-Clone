@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     jwt_issuer: str = ""
 
     # ── Dashboard ──
-    dashboard_url: str = "https://windyclone.com"
+    dashboard_url: str = "https://windyclone.ai"
 
     # ── Webhook replay defence ──
     # If a sender includes X-*-Timestamp, we verify two things: (1) the
@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     log_level: str = "info"
     # Prod default carries the public dashboard origin only. Developers
     # extend via CORS_ORIGINS env for their local Vite server.
-    cors_origins: str = "https://windyclone.com"
+    cors_origins: str = "https://windyclone.ai"
     # Hard ceiling on inbound request bodies. Orders/preferences/webhooks all
     # fit in < 4 KB; 64 KB leaves headroom for future multipart bodies but
     # still rejects obvious abuse (Wave-7 probe accepted a 10 MB body).

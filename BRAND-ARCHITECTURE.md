@@ -160,7 +160,7 @@ Human birth certificates have ink footprints because they're biometrically uniqu
 ### 🧬 Windy Clone
 **What it does:** Converts accumulated voice & text data into a digital likeness — voice clone, avatar, soul file
 **Role in the family:** The moonshot. Smallest market today, enormous market in 3-5 years.
-**Website:** windyclone.com
+**Website:** windyclone.ai (windyclone.com 302-redirects here)
 **Revenue model:** TBD — likely subscription for ongoing clone refinement
 **Strategic vision:** Digital identity persistence. The consumer entry point to digital immortality.
 **Ship priority:** #3 — Builds on data from Windy Word users over time
@@ -481,7 +481,7 @@ The concept of **creative power through spoken word** is the single most univers
 | Windy Mail | windymail.ai | AI-native email, signals agent-friendly |
 | HiFly | hifly.ai | AI agent framework |
 | Windy Fly | windyfly.ai | AI agent product |
-| Windy Clone | windyclone.com | Traditional software product |
+| Windy Clone | windyclone.ai | AI-native consumer product (joins the .ai family) |
 | Windy Cloud | windycloud.com | Traditional infrastructure product |
 | Eternitas | eternitas.ai | AI bot registry |
 
