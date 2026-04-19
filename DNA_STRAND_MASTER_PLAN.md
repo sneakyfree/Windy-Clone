@@ -189,7 +189,7 @@ PlayHT adapter             Progress tracking           In-house voice synth
 | 7 | Database | **SQLite (dev) / PostgreSQL (prod)** | Track orders, provider jobs, preferences |
 | 8 | Container | **Docker + docker-compose** | Consistent with ecosystem |
 | 9 | Port | **8400** | Fits ecosystem port allocation |
-| 10 | Domain | **windyclone.com** | Per BRAND-ARCHITECTURE.md |
+| 10 | Domain | **windyclone.ai** | Per BRAND-ARCHITECTURE.md (windyclone.com 302-redirects here via Cloudflare page rule) |
 
 ---
 
@@ -560,7 +560,7 @@ DATABASE_URL=sqlite+aiosqlite:///data/windy_clone.db
 HOST=0.0.0.0
 PORT=8400
 LOG_LEVEL=info
-CORS_ORIGINS=https://windyclone.com,https://windypro.thewindstorm.uk
+CORS_ORIGINS=https://windyclone.ai,https://windypro.thewindstorm.uk
 
 # Affiliate tracking
 ELEVENLABS_AFFILIATE_ID=windy
@@ -575,7 +575,7 @@ HEYGEN_AFFILIATE_ID=windy
 
 - **VPS:** Hostinger at `72.60.118.54` (shared with other services)
 - **Port:** 8400
-- **Domain:** `windyclone.com`
+- **Domain:** `windyclone.ai` (windyclone.com 302-redirects here via Cloudflare page rule)
 - **Reverse proxy:** Nginx
 - **SSL:** Let's Encrypt via certbot
 

@@ -6,6 +6,7 @@ Covers:
   * Pipeline short-circuits cleanly in dev mode (existing orders tests already rely on this).
 """
 
+import asyncio
 import uuid
 from typing import Any
 
@@ -255,15 +256,33 @@ async def test_pipeline_eternitas_failure_still_creates_clone(monkeypatch, live_
 
 
 @pytest.mark.anyio
-async def test_pipeline_dev_mode_is_noop(client):
-    """Existing order-creation tests rely on the pipeline being a no-op in dev mode."""
+async def test_pipeline_dev_mode_marks_awaiting_upstream(client):
+    """Wave-12 M-1 fix: the dev-mode short-circuit must update the order
+    row so the UI can render a banner — not leave it silently `pending`.
+    """
     resp = await client.post(
         "/api/v1/orders", json={"provider_id": "elevenlabs", "clone_type": "voice"}
     )
     assert resp.status_code == 200
     order_id = resp.json()["order_id"]
 
+    # Pipeline runs as a BackgroundTask; give it a moment to commit the
+    # AWAITING_UPSTREAM update before we read.
     factory = get_session_factory()
-    async with factory() as db:
-        order = (await db.execute(select(Order).where(Order.id == order_id))).scalar_one()
-        assert order.status == OrderStatus.PENDING.value  # untouched by pipeline
+    final_status = None
+    for _ in range(50):
+        async with factory() as db:
+            order = (
+                await db.execute(select(Order).where(Order.id == order_id))
+            ).scalar_one()
+            final_status = order.status
+            error_message = order.error_message
+        if final_status == OrderStatus.AWAITING_UPSTREAM.value:
+            break
+        await asyncio.sleep(0.05)
+
+    assert final_status == OrderStatus.AWAITING_UPSTREAM.value, (
+        f"expected AWAITING_UPSTREAM after dev-mode short-circuit, got {final_status}"
+    )
+    assert error_message
+    assert "dev mode" in error_message.lower()
