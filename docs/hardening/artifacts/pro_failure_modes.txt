@@ -1,0 +1,10 @@
+windy-pro stats fetch failed for probe--2070635030831900962: connection refused
+windy-pro stats fetch failed for probe-4487165714785140163: HTTP 401
+windy-pro stats fetch failed for probe--6426521030512114206: HTTP 500
+windy-pro stats fetch failed for probe-9086802515454017473: invalid json
+windy-pro stats fetch failed for probe-2603164864852698657: slow
+[Pro down (ConnectError)] stale=False unavailable=True total_words=0
+[Pro 401] stale=False unavailable=True total_words=0
+[Pro 500] stale=False unavailable=True total_words=0
+[Pro malformed body] stale=False unavailable=True total_words=0
+[Pro timeout] stale=False unavailable=True total_words=0

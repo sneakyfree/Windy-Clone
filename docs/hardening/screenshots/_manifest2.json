@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "slug": "10-deeplink-from-legacy",
+      "requested": "/legacy?wc=windyclone%3A%2F%2Fdiscover",
+      "final": "http://localhost:5173/discover"
+    },
+    {
+      "slug": "11-deeplink-from-discover",
+      "requested": "/discover?wc=windyclone%3A%2F%2Forder%2Ford_42",
+      "final": "http://localhost:5173/order/ord_42"
+    }
+  ],
+  "consoleLogs": [
+    "[debug] [vite] connecting...",
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[debug] [vite] connected.",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+  ]
+}
