@@ -16,6 +16,7 @@ def fresh(monkeypatch):
         "windy_pro_jwks_url": s.windy_pro_jwks_url,
         "windy_pro_api_url": s.windy_pro_api_url,
         "eternitas_url": s.eternitas_url,
+        "elevenlabs_api_key": s.elevenlabs_api_key,
     }
     yield s
     for k, v in prior.items():
@@ -64,4 +65,18 @@ def test_production_with_safe_config_boots(fresh):
     fresh.windy_pro_jwks_url = "https://auth.windy.example/.well-known/jwks.json"
     fresh.windy_pro_api_url = "https://pro.windy.example"
     fresh.eternitas_url = "https://eternitas.windy.example"
+    fresh.elevenlabs_api_key = "sk-live-test"
     _enforce_boot_guards(fresh)  # does not raise
+
+
+def test_production_without_wired_provider_key_refuses_boot(fresh):
+    """Wave-12 M-1 companion guard: every wired provider (not coming_soon)
+    must have its API key set in prod, or orders would accept and stall."""
+    fresh.environment = "production"
+    fresh.dev_mode = False
+    fresh.windy_pro_jwks_url = "https://auth.windy.example/.well-known/jwks.json"
+    fresh.windy_pro_api_url = "https://pro.windy.example"
+    fresh.eternitas_url = "https://eternitas.windy.example"
+    fresh.elevenlabs_api_key = ""  # the only wired provider today
+    with pytest.raises(UnsafeBootConfig, match="elevenlabs"):
+        _enforce_boot_guards(fresh)

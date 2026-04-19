@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from .config import Settings, get_settings
 from .db.engine import init_db
 from .middleware.rate_limit import RateLimitMiddleware
+from .providers.registry import WIRED_PROVIDER_IDS
 from .routes import health, legacy, providers, orders, clones, preferences, webhooks, deeplinks
 from .services.order_reaper import reap_orphaned_orders
 
@@ -28,6 +29,17 @@ _UNSAFE_URL_MARKERS = (
     "eternitas.thewindstorm.uk",  # known unreachable placeholder
     "api.windypro.com",  # known non-resolving placeholder
 )
+
+
+# Wired provider → name of the Settings attribute holding that provider's API
+# key. When a new adapter lands in `api/app/providers/`, add it to
+# WIRED_PROVIDER_IDS *and* here — otherwise the boot guard will silently let
+# prod start without the key and the pipeline will stall at FAILED per the
+# Wave-12 M-1 fix. The mapping lives here rather than on the Settings class
+# because Settings shouldn't know about the provider registry.
+_WIRED_PROVIDER_KEY_SETTINGS: dict[str, str] = {
+    "elevenlabs": "elevenlabs_api_key",
+}
 
 
 class UnsafeBootConfig(RuntimeError):
@@ -68,6 +80,26 @@ def _enforce_boot_guards(settings: Settings) -> None:
                 f"ENVIRONMENT=production but these URLs are still unconfigured "
                 f"defaults:\n{lines}\n"
                 f"Override them in the environment before deploying."
+            )
+
+        # Every wired provider (adapter shipped, coming_soon=false) must
+        # have its API key configured. Without this check a prod deploy
+        # that forgets to wire a key silently accepts orders and the
+        # pipeline stalls them at FAILED — spec-correct per Wave-12 M-1,
+        # but a bad user experience. Refuse boot instead.
+        missing_keys = [
+            pid
+            for pid in WIRED_PROVIDER_IDS
+            if not getattr(
+                settings, _WIRED_PROVIDER_KEY_SETTINGS.get(pid, ""), ""
+            )
+        ]
+        if missing_keys:
+            raise UnsafeBootConfig(
+                f"ENVIRONMENT=production but no API key configured for wired "
+                f"providers: {', '.join(sorted(missing_keys))}. Orders would "
+                f"accept and fail immediately. Set the matching *_API_KEY env "
+                f"var, or mark the provider coming_soon in providers/registry.py."
             )
 
     if settings.dev_mode:

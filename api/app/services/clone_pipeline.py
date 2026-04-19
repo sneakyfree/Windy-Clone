@@ -77,8 +77,36 @@ async def run_elevenlabs_pipeline(
             logger.warning("pipeline: order %s vanished before training", order_id)
             return
 
-        if settings.dev_mode or not settings.elevenlabs_api_key:
-            logger.info("pipeline: skipping live training for order %s (dev or missing key)", order_id)
+        # Short-circuit before a live provider call — but NEVER without
+        # updating the order row. An order that silently sits at `pending`
+        # forever (Wave-11 M-1) gives the user no signal that their
+        # request is dead; the UI shows "Pending 0%" with no explanation,
+        # and the same behaviour leaks into prod the moment ops forgets
+        # to wire `ELEVENLABS_API_KEY`.
+        if settings.dev_mode:
+            order.status = OrderStatus.AWAITING_UPSTREAM.value
+            order.error_message = (
+                "Dev mode: no training ran. This order was recorded so the UI "
+                "can render the post-submit flow, but no audio was sent to a "
+                "provider. Set DEV_MODE=false and configure ELEVENLABS_API_KEY "
+                "to exercise the live pipeline."
+            )
+            await db.commit()
+            logger.info("pipeline: dev-mode stub for order %s (AWAITING_UPSTREAM)", order_id)
+            return
+
+        if not settings.elevenlabs_api_key:
+            order.status = OrderStatus.FAILED.value
+            order.error_message = (
+                "ElevenLabs training couldn't start — ELEVENLABS_API_KEY is "
+                "not configured on this Windy Clone deployment. Contact the "
+                "operator to set the key, then re-submit."
+            )
+            await db.commit()
+            logger.warning(
+                "pipeline: order %s FAILED — ELEVENLABS_API_KEY is empty in non-dev mode",
+                order_id,
+            )
             return
 
         provider = ElevenLabsProvider()
